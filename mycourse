@@ -1,0 +1,101 @@
+# eto yung tkinter natin na sinasabi ni sir hahwahwha nag advance na ako, madali lang naman
+# o kaya basic ui mehehehe
+import tkinter as tk
+import sqlite3
+
+def get_connection():
+    return sqlite3.connect("mycourse.db")
+
+def create_table():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS courses")
+    cur.execute("""CREATE TABLE courses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            course_code TEXT NOT NULL,
+            course_name TEXT NOT NULL,
+            skills TEXT NOT NULL
+        )
+    """)
+    courses_data = [
+        ("BSIT", "BS Information Technology", "coding, programming, computer, technology, code, math, programmer, it"),
+        ("BSCS", "BS Computer Science", "coding, programming, ai, algorithm, software, math, code, programmer, computer"),
+        ("BSEE", "BS Electrical Engineering", "electrical, kuryente, wiring, engineering"),
+        ("BSBA", "BS Business Administration", "business, selling, marketing, negotiation, negosyo"),
+        ("BSTM", "BS Tourism Management", "tourism, travel, gala, tour guide, airport, tour"),
+        ("BSHM", "BS Hospitality Management", "cooking, cook, luto, hotel, chef, baking, food, pagluluto"),
+        ("BSCRIM", "BS Criminology", "police, pulis, crime, investigation, criminology"),
+        ("BSPS", "BS Political Science", "law, lawyer, abogado, justice, debate, attorney, batas"),
+        ("BSED", "BS Education", "teaching, turo, teacher, tutor, guro"),
+        ("BSFA", "BS Fine Arts", "art, drawing, guhit, design, painting, arts"),
+        ("BSWT", "BS Wellness Tourism", "wellness, massage, spa, therapy, hilot")
+    ]
+    cur.executemany("INSERT INTO courses (course_code, course_name, skills) VALUES (?,?,?)", courses_data)
+    conn.commit()
+    conn.close()
+
+def suggest_course():
+    user_input = entry_skills.get().lower()
+    if not user_input.strip():
+        result_label.config(text="Please type your skills!", fg="red")
+        reason_label.config(text="")
+        return
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM courses")
+    all_courses = cur.fetchall()
+    conn.close()
+
+    matched = []
+    for course in all_courses:
+        course_code, course_name, course_skills_str = course[1], course[2], course[3].lower()
+
+        # hiwalayin natin skills ng course: "coding, programming" -> ["coding", "programming"]
+        course_keywords = [k.strip() for k in course_skills_str.split(",")]
+
+        score = 0
+        found_keywords = []
+        # ito yung bagong logic: kahit nasa sentence lang yung keyword, count na haha
+        for keyword in course_keywords:
+            if keyword and keyword in user_input:
+                score += 1
+                found_keywords.append(keyword)
+
+        if score > 0:
+            matched.append((course_code, course_name, score, found_keywords))
+
+    if not matched:
+        result_label.config(text="No match found", fg="red")
+        reason_label.config(text="Try: coding, cooking, business, tourism, pulis, guro")
+    else:
+        matched_sorted = sorted(matched, key=lambda x: x[2], reverse=True)
+        highest_score = matched_sorted[0][2]
+        best_courses = [f"{m[0]} - {m[1]}" for m in matched_sorted if m[2] == highest_score]
+
+        result_label.config(text="\n".join(best_courses), fg="green")
+        reason_label.config(text=f"Oh, you're good at {', '.join(matched_sorted[0][3])}")
+
+# eto yung GUI natin o graphical user interface, including textfield, buttons, label
+create_table()
+root = tk.Tk()
+root.title("MyCourse")
+root.geometry("500x400")
+root.configure(bg="#fefefe")
+
+tk.Label(root, text="MyCourse", font=("Arial", 18, "bold"), bg="#FEFCFC").pack(pady=5)
+tk.Label(root, text="What are your skills? What are you good at?", bg="#fdfcfc").pack()
+tk.Label(root, text="Please type it below. Ex: I know how to code", bg="#f5f5f5", fg="gray").pack()
+create_table()
+entry_skills = tk.Entry(root, width=40, font=("Arial", 12))
+entry_skills.pack(pady=10, ipady=8)
+
+tk.Button(root, text="Find My Course!", command=suggest_course, bg="#2196F3", fg="white", font=("Arial", 11, "bold")).pack(pady=5)
+
+result_label = tk.Label(root, text="", font=("Arial", 12, "bold"), bg="#f5f5f5", wraplength=400, justify="left")
+result_label.pack(pady=10)
+
+reason_label = tk.Label(root, text="", bg="#f5f5f5", wraplength=400)
+reason_label.pack()
+
+root.mainloop()
