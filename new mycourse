@@ -1,5 +1,6 @@
 # eto yung tkinter natin na sinasabi ni sir hahwahwha nag advance na ako, madali lang naman
 # o kaya basic ui mehehehe
+
 import tkinter as tk
 import sqlite3
 
@@ -36,8 +37,8 @@ def create_table():
 def suggest_course():
     user_input = entry_skills.get().lower().strip()
     if not user_input.strip():
-        result_label.config(text="Please type your skills!", fg="red")
-        reason_label.config
+        result_label.config(text="Please type your skills!")
+        reason_label.config(text="")
         return
 
     conn = get_connection()
@@ -45,7 +46,13 @@ def suggest_course():
     cur.execute("SELECT * FROM courses")
     all_courses = cur.fetchall()
     conn.close()
-    user_skills = [k.strip() for k in user_input.replace(',', '|').split('|') if k.strip()]
+
+   # 3 letters pataas dito
+    user_skills = [k.strip() for k in user_input.replace(',', '|').split('|') if len(k.strip()) >= 3]
+
+    if not user_skills:
+        result_label.config(text="Please type a real skill!")
+        return
 
     matched = []
     for course in all_courses:
@@ -56,7 +63,7 @@ def suggest_course():
         found_keywords = []
         for u in user_skills:
             for c in course_keywords:
-                if u in c or c in u: 
+                if u == c or u in c.split() or c in u.split():
                     score += 1
                     if u not in found_keywords:
                         found_keywords.append(u)
@@ -70,10 +77,9 @@ def suggest_course():
         reason_label.config(text="Try: coding, cooking, business, tourism, pulis, guro")
     else:
         matched_sorted = sorted(matched, key=lambda x: x[2], reverse=True)
-        # dito sir ano ipapakita niya lahat, hindi lang highest
         best_courses = [f"{m[0]} - {m[1]}" for m in matched_sorted]
         result_label.config(text="\n".join(best_courses), fg="green")
-        reason_label.config(text=f"Oh, you're good at {', '.join(matched_sorted[0][3])}")
+        reason_label.config(text=f"oh, you're good at {', '.join(matched_sorted[0][3])}")
 
 # eto yung GUI natin o graphical user interface, including textfield, buttons, label
 create_table()
