@@ -31,10 +31,14 @@ def create_table():
     conn.close()
 
 def suggest_course():
-    user_input = entry_skills.get().lower().strip()
-    if not user_input.strip():
-        result_frame.pack(pady=15, fill="x", padx=20)
-        result_label.config(text="Please type your skills", fg="#E74C3C")
+    name = entry_name.get().strip()
+    strand = entry_strand.get().strip()
+    # sa skills lang ako nag based hahaha
+    skills_input = entry_skills.get().lower().strip()
+
+    if not skills_input or skills_input == "type your skills here." or skills_input == "ex: coding, cooking, mag-turo":
+        result_frame.place(relx=0.5, rely=0.95,anchor="center")
+        result_label.config(text="Please fill up Skills!", anchor="center", fg="#E74C3C")
         return
 
     conn = get_connection()
@@ -43,10 +47,8 @@ def suggest_course():
     all_courses = cur.fetchall()
     conn.close()
 
-    user_skills = [k.strip() for k in user_input.replace(',', '|').split('|') if len(k.strip()) >= 3]
-    if not user_skills:
-        result_label.config(text="Please type a real skill!", fg="#E74C3C")
-        return
+    # skills lang dito talaga
+    user_skills = [k.strip() for k in skills_input.replace(',', '|').split('|') if len(k.strip()) >= 3]
 
     matched = []
     for course in all_courses:
@@ -58,74 +60,72 @@ def suggest_course():
             for c in course_keywords:
                 if u == c or u in c.split() or c in u.split():
                     score += 1
-                    if u not in found_keywords:
-                        found_keywords.append(u)
+                    if u not in found_keywords: found_keywords.append(u)
                     break
         if score > 0:
             matched.append((course_code, course_name, score, found_keywords))
 
-    result_frame.pack(pady=15, fill="x", padx=20)
+    result_frame.place(relx=0.5, rely=0.82, anchor="center")
     if not matched:
-        result_label.config(text="No match found", fg="#E74C3C")
+        result_label.config(text=f"Hi {name}, No match found 😢", fg="#E74C3C")
         reason_label.config(text="Try: coding, cooking, business, tourism, etc.", fg="#7f8c8d")
     else:
         matched_sorted = sorted(matched, key=lambda x: x[2], reverse=True)
-        best_courses = [f"{m[0]} - {m[1]}" for m in matched_sorted]
+        best_courses = [f"✨ {m[0]} - {m[1]}" for m in matched_sorted]
         top_match = matched_sorted[0]
-        result_label.config(text="\n".join(best_courses))
-        reason_label.config(text=f"Suggested course: {top_match[0]} because you're good at {', '.join(top_match[3])}", fg="#27AE60")
+        result_label.config(text=f"Hi {name}! \n" + "\n".join(best_courses), fg="#2C3E50")
+        reason_label.config(text=f"Suggested: {top_match[0]} because you're good at {', '.join(top_match[3])} | Strand: {strand}", fg="#27AE60")
 
-# GUI design natin to, dito na nag start
+# gui, o size ng box basta
 create_table()
 root = tk.Tk()
 root.title("MyCourse")
-root.geometry("1500x1450")
+root.geometry("1200x850")
+root.attributes('-fullscreen')
 root.configure(bg="#EEF2FF")
 root.resizable(False, False)
-
-# Header, eto yung sa taas natin
-header = tk.Frame(root, bg="#4F46E5", height=80)
+root.attributes('-fullscreen')
+header = tk.Frame(root, bg="#026307", height=80)
 header.pack(fill="x")
-tk.Label(header, text="MyCourse", font=("Arial", 22, "bold"), bg="#4F46E5", fg="white").pack(pady=(15,0))
-tk.Label(header, text="Discover the course that fits YOU", font=("Arial", 10), bg="#4F46E5", fg="#C7D2FE").pack()
+tk.Label(header, text="MyCourse", font=("Arial", 22, "bold"), bg="#026307", fg="white").pack(pady=(15,0))
+tk.Label(header, text="Discover the course that fits YOU", font=("Arial", 10), bg="#026307", fg="#C7D2FE").pack()
 
-# eto naman yung asa gitna haha
-card = tk.Frame(root, bg="white", bd=0, highlightbackground="#E0E7FF", highlightthickness=1)
-card.pack(pady=20, padx=20, fill="x", ipady=15)
+center_container = tk.Frame(root, bg="#EEF2FF")
+center_container.place(relx=0.5, rely=0.5, anchor="center", width=700)
 
-tk.Label(card, text="What are your skills?", font=("Arial", 14, "bold"), bg="white", fg="#1E293B").pack(pady=(10,2))
-tk.Label(card, text="Ex: I know how to code, cook, mag-turo", font=("Arial", 9), bg="white", fg="#64748B").pack()
+card = tk.Frame(center_container, bg="white", highlightbackground="#E0E7FF", highlightthickness=1)
+card.pack(fill="x", ipady=20)
 
-# Entry with modern look
-entry_frame = tk.Frame(card, bg="white")
-entry_frame.pack(pady=15)
+tk.Label(card, text="Tell us about YOU", font=("Arial", 16, "bold"), bg="white", fg="#1E293B", justify="center").pack(pady=(15,10), anchor="center")
 
-entry_skills = tk.Entry(entry_frame, width=38, bg="#F1F5F9", fg="#334155",
-                        relief="flat", highlightthickness=1, highlightbackground="#E2E8F0", highlightcolor="#4F46E5")
-entry_skills.pack(ipady=12, ipadx=10)
-entry_skills.insert(0, "Type your skills here...")
-def on_focus_in(e):
-    if e.widget.get() == "Type your skills here...": e.widget.delete(0, 'end')
-def on_focus_out(e):
-    if not e.widget.get(): e.widget.insert(0, "Type your skills here...")
-entry_skills.bind("<FocusIn>", on_focus_in)
-entry_skills.bind("<FocusOut>", on_focus_out)
+def create_field(parent, label_text, placeholder):
+    tk.Label(parent, text=label_text, font=("Arial", 11, "bold"), bg="white", fg="#334155", justify="center").pack(anchor="center", pady=(10,0))
+    e = tk.Entry(parent, width=45, font=("Arial", 10), bg="#F1F5F9", fg="#334155", relief="flat", highlightthickness=1, highlightbackground="#E2E8F0", highlightcolor="#4F46E5", justify="center")
+    e.pack(ipady=10, ipadx=10, pady=5)
+    e.insert(0, placeholder)
+    def on_in(event):
+        if event.widget.get() == placeholder: event.widget.delete(0, 'end')
+    def on_out(event):
+        if not event.widget.get(): event.widget.insert(0, placeholder)
+    e.bind("<FocusIn>", on_in)
+    e.bind("<FocusOut>", on_out)
+    return e
 
-# button natin to, pag clinick mo parang ano talaga hahaha 
-btn = tk.Button(card, text="Find My Course!", command=suggest_course, font=("Arial", 11, "bold"),
-                bg="#4F46E5", fg="white", activebackground="#4338CA", activeforeground="white",
-                bd=0, padx=20, pady=8)
-btn.pack(pady=5)
+entry_name = create_field(card, "Name:", "Ex: Juan Dela Cruz")
+entry_strand = create_field(card, "Previous SHS Strand:", "Ex: STEM, ABM, HUMSS, TVL")
+entry_chars = create_field(card, "Characteristics:", "Ex: masipag, matalino, creative, friendly")
+entry_skills = create_field(card, "Skills:", "Ex: coding, cooking, mag-turo")
+entry_interest = create_field(card, "Interest:", "Ex: business, tourism, technology")
 
-# dito yung result
-result_frame = tk.Frame(root, bg="white", bd=0)
-# hindi muna ipapakita hanggat walang result
-reason_label = tk.Label(result_frame, text="", font=("Arial", 10), bg="white", wraplength=450, justify="left")
-reason_label.pack(anchor="w", padx=15, pady=(10,0))
-result_label = tk.Label(result_frame, text="", font=("Arial", 11, "bold"), bg="white", wraplength=450, justify="left")
-result_label.pack(anchor="w", padx=15, pady=5)
+btn = tk.Button(card, text="Find My Course!", command=suggest_course, font=("Arial", 12, "bold"), bg="#4F46E5", fg="white", activebackground="#4338CA", activeforeground="white", bd=0, padx=25, pady=10, cursor="hand2")
+btn.pack(pady=15)
 
-# footer natin to, eto yung asa baba
+result_frame = tk.Frame(center_container, bg="white")
+reason_label = tk.Label(result_frame, text="", font=("Arial", 10), bg="white", wraplength=600, justify="center")
+reason_label.pack(anchor="center", padx=15, pady=(10,0))
+result_label = tk.Label(result_frame, text="", font=("Arial", 11, "bold"), bg="white", wraplength=600, justify="center")
+result_label.pack(anchor="center", padx=15, pady=5)
+
 tk.Label(root, text="MyCourse - PHINMA", font=("Arial", 8), bg="#EEF2FF", fg="#94A3B8").pack(side="bottom", pady=10)
 
 root.mainloop()
