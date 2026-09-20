@@ -1,5 +1,10 @@
 import tkinter as tk
 import sqlite3
+try:
+    from PIL import Image, ImageTk
+    PIL_AVAILABLE = True
+except:
+    PIL_AVAILABLE = False
 
 def get_connection():
     return sqlite3.connect("mycourse.db")
@@ -33,12 +38,13 @@ def create_table():
 def suggest_course():
     name = entry_name.get().strip()
     strand = entry_strand.get().strip()
-    # sa skills lang ako nag based hahaha
     skills_input = entry_skills.get().lower().strip()
 
-    if not skills_input or skills_input == "type your skills here." or skills_input == "ex: coding, cooking, mag-turo":
-        result_frame.place(relx=0.5, rely=0.95,anchor="center")
-        result_label.config(text="Please fill up Skills!", anchor="center", fg="#E74C3C")
+    # baba lang to ng result
+    result_frame.pack(fill="x", pady=(20,0), anchor="center")
+
+    if not skills_input or "ex:" in skills_input:
+        result_label.config(text="Please fill up", fg="#E74C3C")
         return
 
     conn = get_connection()
@@ -47,61 +53,79 @@ def suggest_course():
     all_courses = cur.fetchall()
     conn.close()
 
-    # skills lang dito talaga
     user_skills = [k.strip() for k in skills_input.replace(',', '|').split('|') if len(k.strip()) >= 3]
-
     matched = []
     for course in all_courses:
         course_code, course_name, course_skills_str = course[1], course[2], course[3].lower()
         course_keywords = [k.strip() for k in course_skills_str.split(",")]
         score = 0
-        found_keywords = []
+        found = []
         for u in user_skills:
             for c in course_keywords:
                 if u == c or u in c.split() or c in u.split():
                     score += 1
-                    if u not in found_keywords: found_keywords.append(u)
+                    if u not in found: found.append(u)
                     break
         if score > 0:
-            matched.append((course_code, course_name, score, found_keywords))
+            matched.append((course_code, course_name, score, found))
 
-    result_frame.place(relx=0.5, rely=0.82, anchor="center")
     if not matched:
-        result_label.config(text=f"Hi {name}, No match found 😢", fg="#E74C3C")
-        reason_label.config(text="Try: coding, cooking, business, tourism, etc.", fg="#7f8c8d")
+        result_label.config(text=f"Hi {name}, No match", fg="#E74C3C")
+        reason_label.config(text="Try: coding, cooking, business", fg="#7f8c8d")
     else:
         matched_sorted = sorted(matched, key=lambda x: x[2], reverse=True)
-        best_courses = [f"✨ {m[0]} - {m[1]}" for m in matched_sorted]
-        top_match = matched_sorted[0]
-        result_label.config(text=f"Hi {name}! \n" + "\n".join(best_courses), fg="#2C3E50")
-        reason_label.config(text=f"Suggested: {top_match[0]} because you're good at {', '.join(top_match[3])} | Strand: {strand}", fg="#27AE60")
+        best = [f"{m[0]} - {m[1]}" for m in matched_sorted[:3]]
+        top = matched_sorted[0]
+        result_label.config(text=f"Hi {name}! Here is the suggested course: \n" + "\n".join(best), fg="#FB0808")
 
-# gui, o size ng box basta
 create_table()
 root = tk.Tk()
 root.title("MyCourse")
-root.geometry("1200x850")
-root.attributes('-fullscreen')
-root.configure(bg="#EEF2FF")
-root.resizable(False, False)
-root.attributes('-fullscreen')
-header = tk.Frame(root, bg="#026307", height=80)
-header.pack(fill="x")
-tk.Label(header, text="MyCourse", font=("Arial", 22, "bold"), bg="#026307", fg="white").pack(pady=(15,0))
-tk.Label(header, text="Discover the course that fits YOU", font=("Arial", 10), bg="#026307", fg="#C7D2FE").pack()
+root.state('zoomed')
+root.bind("<Escape>", lambda e: root.destroy())
 
-center_container = tk.Frame(root, bg="#EEF2FF")
-center_container.place(relx=0.5, rely=0.5, anchor="center", width=700)
+header = tk.Frame(root, bg="#026307", height=65)
+header.pack(fill="x", side="top")
 
-card = tk.Frame(center_container, bg="white", highlightbackground="#E0E7FF", highlightthickness=1)
-card.pack(fill="x", ipady=20)
+try:
+    if PIL_AVAILABLE:
+        img = Image.open("logo.png")
+        img = img.resize((48, 48), Image.Resampling.LANCZOS)
+        logo_img = ImageTk.PhotoImage(img)
+        tk.Label(header, image=logo_img, bg="#026307").pack(side="left", padx=20, pady=8)
+    else:
+        tk.Label(header, font=("Arial", 24), bg="#026307", fg="white").pack(side="left", padx=20)
+except:
+    tk.Label(header, font=("Arial", 24), bg="#026307", fg="white").pack(side="left", padx=20)
 
-tk.Label(card, text="Tell us about YOU", font=("Arial", 16, "bold"), bg="white", fg="#1E293B", justify="center").pack(pady=(15,10), anchor="center")
+ht = tk.Frame(header, bg="#026307")
+ht.pack(side="left")
+tk.Label(ht, text="MyCourse", font=("Arial", 19, "bold"), bg="#026307", fg="white", anchor="w").pack(anchor="w")
+tk.Label(ht, text="Discover the course that fits YOU!", font=("Arial", 9), bg="#026307", fg="#BBF7D0", anchor="w").pack(anchor="w")
+tk.Label(ht, text="PHINMA Education", font=("Arial", 9), bg="#026307", fg="#BBF7D0", anchor="w").pack(anchor="w")
+
+main = tk.Frame(root, bg="#DCFCE7")
+main.pack(fill="both", expand=True)
+
+center_container = tk.Frame(main, bg="#DCFCE7")
+center_container.place(relx=0.5, rely=0.5, anchor="center")
+
+card = tk.Frame(center_container, bg="white", highlightbackground="#BBF7D0", highlightthickness=2)
+card.pack(fill="x", ipady=10, ipadx=15)
+
+# eto yung tell us about you natin
+title_frame = tk.Frame(card, bg="white")
+title_frame.pack(fill="x", pady=12)
+
+tk.Label(title_frame, text="Tell us about YOU",
+         font=("Arial", 22, "bold"), 
+         bg="white",
+         fg="#1E293B").pack(anchor="center")
 
 def create_field(parent, label_text, placeholder):
-    tk.Label(parent, text=label_text, font=("Arial", 11, "bold"), bg="white", fg="#334155", justify="center").pack(anchor="center", pady=(10,0))
-    e = tk.Entry(parent, width=45, font=("Arial", 10), bg="#F1F5F9", fg="#334155", relief="flat", highlightthickness=1, highlightbackground="#E2E8F0", highlightcolor="#4F46E5", justify="center")
-    e.pack(ipady=10, ipadx=10, pady=5)
+    tk.Label(parent, text=label_text, font=("Arial", 10, "bold"), bg="white", fg="#334155").pack(anchor="center", pady=(5,0))
+    e = tk.Entry(parent, width=40, font=("Arial", 10), bg="#F0FDF4", fg="#334155", relief="flat", highlightthickness=1, highlightbackground="#BBF7D0", highlightcolor="#026307", justify="center")
+    e.pack(ipady=7, ipadx=10, pady=2, anchor="center")
     e.insert(0, placeholder)
     def on_in(event):
         if event.widget.get() == placeholder: event.widget.delete(0, 'end')
@@ -110,22 +134,21 @@ def create_field(parent, label_text, placeholder):
     e.bind("<FocusIn>", on_in)
     e.bind("<FocusOut>", on_out)
     return e
+# eto yung mga box or frame natin
+entry_name = create_field(card, "Name:", "Ex: Jullian James Casilang")
+entry_strand = create_field(card, "Previous SHS Strand:", "Ex: TVL")
+entry_chars = create_field(card, "Characteristics:", "Ex: masipag")
+entry_skills = create_field(card, "Skills:", "Ex: coding")
+entry_interest = create_field(card, "Interest:", "Ex: software")
 
-entry_name = create_field(card, "Name:", "Ex: Juan Dela Cruz")
-entry_strand = create_field(card, "Previous SHS Strand:", "Ex: STEM, ABM, HUMSS, TVL")
-entry_chars = create_field(card, "Characteristics:", "Ex: masipag, matalino, creative, friendly")
-entry_skills = create_field(card, "Skills:", "Ex: coding, cooking, mag-turo")
-entry_interest = create_field(card, "Interest:", "Ex: business, tourism, technology")
+btn = tk.Button(card, text="Suggested Course:", command=suggest_course, font=("Arial", 11, "bold"), bg="#026307", fg="white", activebackground="#014d06", bd=0, padx=24, pady=7, cursor="hand2")
+btn.pack(pady=10, anchor="center")
 
-btn = tk.Button(card, text="Find My Course!", command=suggest_course, font=("Arial", 12, "bold"), bg="#4F46E5", fg="white", activebackground="#4338CA", activeforeground="white", bd=0, padx=25, pady=10, cursor="hand2")
-btn.pack(pady=15)
-
-result_frame = tk.Frame(center_container, bg="white")
-reason_label = tk.Label(result_frame, text="", font=("Arial", 10), bg="white", wraplength=600, justify="center")
-reason_label.pack(anchor="center", padx=15, pady=(10,0))
-result_label = tk.Label(result_frame, text="", font=("Arial", 11, "bold"), bg="white", wraplength=600, justify="center")
-result_label.pack(anchor="center", padx=15, pady=5)
-
-tk.Label(root, text="MyCourse - PHINMA", font=("Arial", 8), bg="#EEF2FF", fg="#94A3B8").pack(side="bottom", pady=10)
+# eto yung result natinn
+result_frame = tk.Frame(center_container, bg="white", highlightbackground="#026307", highlightthickness=1.5)
+reason_label = tk.Label(result_frame, text="", font=("Arial", 9), bg="white", wraplength=550, justify="center", fg="#026307")
+reason_label.pack(anchor="center", padx=12, pady=(8,2))
+result_label = tk.Label(result_frame, text="", font=("Arial", 10, "bold"), bg="white", wraplength=550, justify="center")
+result_label.pack(anchor="center", padx=12, pady=(0,8))
 
 root.mainloop()
